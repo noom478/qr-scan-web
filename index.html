@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>สแกน QR | บันทึก | ส่งออก Excel</title>
+  <!-- html5-qrcode for camera scanning -->
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <!-- SheetJS for .xlsx export -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer></script>
+  <style>
+    :root { --c1:#0ea5e9; --bg:#0b1220; --card:#111827; --muted:#9ca3af; --ok:#10b981; --warn:#f59e0b; }
+    * { box-sizing: border-box; }
+    body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial; background:linear-gradient(180deg,#0f172a,#0b1220); color:#e5e7eb; }
+    header{ padding:16px 20px; border-bottom:1px solid #1f2937; position:sticky; top:0; backdrop-filter:saturate(140%) blur(6px); background-color:rgba(17,24,39,.7); }
+    h1{ margin:0; font-size:20px; }
+    .container{ max-width:1100px; margin:20px auto; padding:0 16px; }
+    .grid{ display:grid; gap:16px; grid-template-columns: 1fr; }
+    @media(min-width:960px){ .grid{ grid-template-columns: 420px 1fr; } }
+    .card{ background:var(--card); border:1px solid #1f2937; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+    .card h2{ margin:0; padding:14px 16px; font-size:16px; border-bottom:1px solid #1f2937; color:#fff; }
+    .card .body{ padding:16px; }
+    label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    input[type="text"], textarea, select{ width:100%; padding:12px 12px; background:#0b1020; color:#fff; border:1px solid #1f2937; border-radius:12px; outline:none; }
+    textarea{ resize:vertical; min-height:72px; }
+    .row{ display:grid; grid-template-columns:1fr; gap:12px; }
+    @media(min-width:680px){ .row.two{ grid-template-columns: 1fr 1fr; } }
+    .actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    button{ appearance:none; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; }
+    .btn{ background:var(--c1); color:#081018; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn-ghost{ background:#0b1020; color:#e5e7eb; border:1px solid #1f2937; }
+    .btn-ok{ background:var(--ok); color:#062014; }
+    .btn-warn{ background:var(--warn); color:#1f1302; }
+    .muted{ color:var(--muted); font-size:12px; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; }
+    th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid #1f2937; vertical-align:top; }
+    th{ font-size:12px; color:#aeb0b4; letter-spacing:.02em; }
+    tr:hover td{ background:rgba(255,255,255,.02); }
+    .pill{ display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; background:#0b1020; border:1px solid #1f2937; font-size:12px; color:#aeb0b4; }
+    .flex{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .right{ margin-left:auto; }
+    .small{ font-size:12px; }
+    .success{ color:var(--ok); }
+    .error{ color:#ef4444; }
+    #reader{ width:100%; min-height:320px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container flex">
+      <h1>สแกน QR สำหรับจุดจอด | บันทึก & ส่งออก Excel</h1>
+      <div class="right pill" id="status-pill">พร้อมใช้งาน</div>
+    </div>
+  </header>
+
+  <div class="container grid">
+    <!-- Left: Scanner + Form -->
+    <section class="card">
+      <h2>สแกน QR</h2>
+      <div class="body">
+        <div class="row two">
+          <div>
+            <label for="cameraSelect">เลือกกล้อง</label>
+            <select id="cameraSelect"></select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="actions">
+              <button class="btn" id="btnStart">เริ่มสแกน</button>
+              <button class="btn-ghost" id="btnStop" disabled>หยุด</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="reader" class="card" style="border-radius:12px; overflow:hidden; border:1px dashed #1f2937; background:#0b1020"></div>
+        <p class="muted" style="margin-top:8px">* หากไม่เห็นภาพจากกล้อง ให้อนุญาตการใช้งานกล้องในเบราว์เซอร์</p>
+
+        <hr style="border:0; border-top:1px solid #1f2937; margin:16px 0" />
+
+        <div class="row">
+          <div>
+            <label for="scanValue">ข้อมูลที่สแกน (อ่านอย่างเดียว)</label>
+            <input id="scanValue" type="text" placeholder="ผลลัพธ์จาก QR จะขึ้นอัตโนมัติ" readonly />
+          </div>
+        </div>
+        <div class="row two" style="margin-top:10px">
+          <div>
+            <label for="slot">ตำแหน่งจอด</label>
+            <input id="slot" type="text" placeholder="เช่น B12 หรือ ชั้น 3 โซน A" />
+          </div>
+          <div>
+            <label for="remark">หมายเหตุ (Remark)</label>
+            <input id="remark" type="text" placeholder="ข้อความเพิ่มเติม (ถ้ามี)" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-ok" id="btnSave" disabled>บันทึกรายการ</button>
+          <button class="btn-warn" id="btnClearAll">ล้างข้อมูลทั้งหมด</button>
+        </div>
+        <div class="small" id="saveMsg"></div>
+      </div>
+    </section>
+
+    <!-- Right: Records Table -->
+    <section class="card">
+      <h2>รายการที่บันทึก</h2>
+      <div class="body">
+        <div class="flex" style="margin-bottom:8px">
+          <span class="pill" id="countPill">0 รายการ</span>
+          <div class="right actions">
+            <button class="btn-ghost" id="btnExport">ส่งออก Excel (.xlsx)</button>
+          </div>
+        </div>
+        <div style="overflow:auto; max-height:540px" id="tableWrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>เวลา</th>
+                <th>ข้อมูลที่สแกน</th>
+                <th>ตำแหน่งจอด</th>
+                <th>หมายเหตุ</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <!-- rows injected here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ============== State ==============
+    const STORAGE_KEY = 'qrRecords.v1';
+    let records = [];
+    let html5QrCode = null; // Html5Qrcode instance
+    let currentCameraId = null;
+
+    // ============== Helpers ==============
+    const $ = (id) => document.getElementById(id);
+    const statusPill = $('status-pill');
+    const fmtDateTime = (d=new Date()) => {
+      const pad = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+
+    function loadRecords(){
+      try{ records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      catch{ records = []; }
+      renderTable();
+    }
+    function saveRecords(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      renderTable();
+    }
+
+    function renderTable(){
+      const tbody = $('tbody');
+      tbody.innerHTML = '';
+      records.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="small">${idx+1}</td>
+          <td class="small">${r.time}</td>
+          <td style="word-break: break-all">${escapeHtml(r.value)}</td>
+          <td>${escapeHtml(r.slot||'')}</td>
+          <td>${escapeHtml(r.remark||'')}</td>
+          <td><button class="btn-ghost small" data-del="${idx}">ลบ</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      $('countPill').textContent = `${records.length} รายการ`;
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+    }
+
+    // ============== Scanner ==============
+    async function listCameras(){
+      const select = $('cameraSelect');
+      select.innerHTML = '<option>กำลังค้นหากล้อง...</option>';
+      try{
+        const devices = await Html5Qrcode.getCameras();
+        select.innerHTML = '';
+        if(!devices.length){
+          select.innerHTML = '<option>ไม่พบกล้อง</option>';
+          return;
+        }
+        devices.forEach((d,i)=>{
+          const opt = document.createElement('option');
+          opt.value = d.id; opt.textContent = d.label || `กล้อง ${i+1}`;
+          select.appendChild(opt);
+        });
+        currentCameraId = devices[0].id;
+        select.value = currentCameraId;
+      }catch(err){
+        console.error(err);
+        select.innerHTML = '<option>อนุญาตการใช้งานกล้องก่อน</option>';
+      }
+    }
+
+    async function startScan(){
+      const readerEl = $('reader');
+      statusPill.textContent = 'กำลังสแกน...';
+      statusPill.classList.remove('error');
+      statusPill.classList.add('success');
+      $('btnStart').disabled = true;
+      $('btnStop').disabled = false;
+
+      if(!html5QrCode){
+        html5QrCode = new Html5Qrcode('reader');
+      } else {
+        try{ await html5QrCode.stop(); }catch(e){}
+        readerEl.innerHTML = '';
+      }
+
+      const qrConfig = { fps: 10, qrbox: { width: 280, height: 280 } };
+      try{
+        await html5QrCode.start(
+          { deviceId: { exact: currentCameraId } },
+          qrConfig,
+          onScanSuccess,
+          onScanError
+        );
+      }catch(err){
+        console.error('start error', err);
+        statusPill.textContent = 'เริ่มสแกนไม่ได้';
+        statusPill.classList.add('error');
+        $('btnStart').disabled = false;
+        $('btnStop').disabled = true;
+      }
+    }
+
+    async function stopScan(){
+      if(html5QrCode){
+        try{ await html5QrCode.stop(); }catch(e){}
+      }
+      $('btnStart').disabled = false;
+      $('btnStop').disabled = true;
+      statusPill.textContent = 'หยุดสแกน';
+      statusPill.classList.remove('success');
+    }
+
+    function onScanSuccess(decodedText, decodedResult){
+      $('scanValue').value = decodedText;
+      $('btnSave').disabled = false;
+      if(navigator.vibrate) navigator.vibrate(80);
+    }
+    function onScanError(err){ /* noop */ }
+
+    // ============== Form actions ==============
+    $('cameraSelect').addEventListener('change', (e)=>{
+      currentCameraId = e.target.value;
+      if(!$('btnStart').disabled){ return; }
+      startScan();
+    });
+
+    $('btnStart').addEventListener('click', startScan);
+    $('btnStop').addEventListener('click', stopScan);
+
+    $('btnSave').addEventListener('click', ()=>{
+      const value = $('scanValue').value.trim();
+      const slot = $('slot').value.trim();
+      const remark = $('remark').value.trim();
+      if(!value){
+        $('saveMsg').textContent = 'ยังไม่มีข้อมูลจากการสแกน';
+        $('saveMsg').className = 'small error';
+        return;
+      }
+      records.unshift({ time: fmtDateTime(), value, slot, remark });
+      saveRecords();
+      $('scanValue').value = '';
+      $('slot').value = '';
+      $('remark').value = '';
+      $('btnSave').disabled = true;
+      $('saveMsg').textContent = 'บันทึกแล้ว';
+      $('saveMsg').className = 'small success';
+    });
+
+    $('btnClearAll').addEventListener('click', ()=>{
+      if(confirm('ล้างข้อมูลทั้งหมดที่บันทึกไว้?')){
+        records = [];
+        saveRecords();
+      }
+    });
+
+    $('tbody').addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      const idx = btn.getAttribute('data-del');
+      if(idx == null) return;
+      records.splice(Number(idx),1);
+      saveRecords();
+    });
+
+    $('btnExport').addEventListener('click', ()=>{
+      if(typeof XLSX === 'undefined'){
+        alert('ยังโหลดไลบรารีสำหรับส่งออกไม่เสร็จ ลองใหม่อีกครั้ง');
+        return;
+      }
+      const rows = [
+        ['ลำดับ', 'เวลา', 'ข้อมูลที่สแกน', 'ตำแหน่งจอด', 'หมายเหตุ']
+      ];
+      records.forEach((r,i)=> rows.push([i+1, r.time, r.value, r.slot||'', r.remark||'']));
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'QR Logs');
+
+      const stamp = new Date();
+      const pad = (n)=> String(n).padStart(2,'0');
+      const fname = `scan_records_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}.xlsx`;
+      XLSX.writeFile(wb, fname);
+    });
+
+    // ============== Init ==============
+    window.addEventListener('load', async ()=>{
+      loadRecords();
+      await listCameras();
+      if(document.location.protocol === 'http:' && location.hostname !== 'localhost'){
+        console.warn('กล้องต้องใช้ผ่าน HTTPS บนโดเมนจริง');
+      }
+      if($('cameraSelect').options.length>0){ startScan(); }
+    });
+
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden){
+        if(!$('btnStop').disabled){ stopScan(); }
+      }
+    });
+  </script>
+</body>
+</html>
